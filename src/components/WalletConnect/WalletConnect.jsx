@@ -1,53 +1,50 @@
-// src/components/WalletConnect/WalletConnect.jsx
-import { useState } from 'react';
-import Web3Modal from 'web3modal';
-import { EthereumProvider } from '@walletconnect/ethereum-provider';
+import { useState, useEffect } from 'react';
 import { useCrypto } from '../../AppContext/CryptoContext';
+import handleConnectWallet from './handleConnectWallet';
+import getAccountBalance from '../../utils/getAccountBalance';
 
 const WalletConnect = () => {
-  const { connectWallet, address } = useCrypto();
-  const [loading, setLoading] = useState(false);
+    const { connectWallet, address, provider } = useCrypto();
+    const [loading, setLoading] = useState(false);
+    const [balance, setBalance] = useState(null);
 
-  const handleConnectWallet = async () => {
-    setLoading(true);
-
-    const providerOptions = {
-      walletconnect: {
-        package: EthereumProvider,
-        options: {
-          projectId: 'YOUR_WALLETCONNECT_PROJECT_ID',
-          rpc: {
-            43113: 'https://api.avax-test.network/ext/bc/C/rpc',
-          },
-        },
-      },
+    const onConnect = async () => {
+        setLoading(true);
+        await handleConnectWallet(connectWallet);
+        setLoading(false);
     };
 
-    const web3Modal = new Web3Modal({
-      cacheProvider: true,
-      providerOptions,
-    });
+    useEffect(() => {
+        const fetchBalance = async () => {
+            if (address && provider) {
+                const accountBalance = await getAccountBalance(provider, address);
+                setBalance(accountBalance);
+            }
+        };
 
-    await connectWallet(web3Modal, EthereumProvider);
+        fetchBalance();
+    }, [address, provider]); 
 
-    setLoading(false);
-  };
-
-  return (
-    <div className="flex flex-col items-center space-y-4">
-      {address ? (
-        <p className="text-lg font-semibold text-green-600">Connected: {address}</p>
-      ) : (
-        <button
-          onClick={handleConnectWallet}
-          disabled={loading}
-          className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'}`}
-        >
-          {loading ? 'Connecting...' : 'Connect Wallet'}
-        </button>
-      )}
-    </div>
-  );
+    return (
+        <div className="flex flex-col items-center space-y-4">
+            {address ? (
+                <>
+                    <p className="text-lg font-semibold text-green-600">Connected: {address}</p>
+                    {balance !== null && (
+                        <p className="text-lg font-semibold">Balance: {balance} AVAX</p>
+                    )}
+                </>
+            ) : (
+                <button
+                    onClick={onConnect}
+                    disabled={loading}
+                    className={`px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'}`}
+                >
+                    {loading ? 'Connecting...' : 'Connect Wallet'}
+                </button>
+            )}
+        </div>
+    );
 };
 
 export default WalletConnect;
